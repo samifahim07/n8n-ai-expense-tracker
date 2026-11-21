@@ -1,0 +1,319 @@
+{
+  "name": "AI Expense Tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "8bee7708-b127-422d-ac84-7e67960397b3",
+      "name": "When chat message received",
+      "webhookId": "73cf3c24-d93f-416c-905a-f1d57b72d187"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput || $json.message.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an expense tracker assistant.\nThe user will write a short sentence about money they spent, in Bangla, Banglish, or English.\nExtract the amount (number only), a category, and a short note.\nCategories: Food, Transport, Shopping, Bills, Health, Education, Entertainment, Other.\nReply with only the extracted data."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "65866620-adf6-40ae-85a3-37897b36ecd5",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        32,
+        256
+      ],
+      "id": "881d5bff-16a6-4d7c-a266-3acddec50797",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ophzO9Lu1iPSJPU8",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"amount\": 150,\n  \"category\": \"Transport\",\n  \"note\": \"rickshaw\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        464,
+        256
+      ],
+      "id": "77934cd4-e0fb-4893-9504-9c558bf01275",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1zvtz7XLgJzhAMIYFIITxfaX19FYOhfNeYp5zIiRPHZo/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zvtz7XLgJzhAMIYFIITxfaX19FYOhfNeYp5zIiRPHZo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $now.format('yyyy-MM-dd') }}",
+            "Amount ": "={{ $json.output.amount }}",
+            "Category": "={{ $json.output.category }}",
+            "Note": "={{ $json.output.note }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Amount ",
+              "displayName": "Amount ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Note",
+              "displayName": "Note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        592,
+        0
+      ],
+      "id": "59063cbe-3ba1-4d14-aa89-88987117362e",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gmPXOsKeukKLjlJd",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fccf8c17-aef8-49f8-bf16-05531e9c5edf",
+              "name": "output",
+              "value": "=Saved: {{ $('AI Agent').item.json.output.amount }} BDT, {{ $('AI Agent').item.json.output.category }} ✅",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        816,
+        0
+      ],
+      "id": "a69c3ad8-79e2-4f3e-bfad-cffc5a1c005f",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        48,
+        -192
+      ],
+      "id": "dcfebfc8-bc09-4428-b340-755b4063b424",
+      "name": "Telegram Trigger",
+      "webhookId": "0ff084d2-954c-47b3-a8c0-3f3a19315ce0",
+      "credentials": {
+        "telegramApi": {
+          "id": "KZ7vjNNrly7AgdR5",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1056,
+        0
+      ],
+      "id": "aa6c035a-2be9-4eed-8b65-597aba3a1ec8",
+      "name": "Send a text message",
+      "webhookId": "c5867f0b-d061-4a70-8c99-b48e75c3b95b",
+      "credentials": {
+        "telegramApi": {
+          "id": "KZ7vjNNrly7AgdR5",
+          "name": "Telegram account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b80c2a5f-c1bc-4340-94fa-f13dfa0a2195",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9e41730eec54b229fa8d528bbfe379e8a94a14270eae770b5bdf54ec48656d02"
+  },
+  "nodeGroups": [],
+  "id": "h3RZDFrryF7TuLrq",
+  "tags": []
+}
